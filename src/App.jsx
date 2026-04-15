@@ -228,6 +228,7 @@ const Icon = ({ name, size = 20 }) => {
     barcode: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 5v14"/><path d="M8 5v14"/><path d="M12 5v14"/><path d="M17 5v14"/><path d="M21 5v14"/></svg>,
     back: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
     cart: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+    scan: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7V2h5"/><path d="M17 2h5v5"/><path d="M22 17v5h-5"/><path d="M7 22H2v-5"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
     upload: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
     settings: <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
   };
@@ -559,6 +560,14 @@ tr:hover td { background: var(--bg-hover); }
 }
 .add-to-cart-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.4); }
 .add-to-cart-btn.added { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+.scan-qr-btn {
+  width: 100%; padding: 14px; border: 2px dashed var(--border); border-radius: 12px;
+  background: transparent; color: var(--text-secondary);
+  font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.2s; margin-top: 12px;
+}
+.scan-qr-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .cart-panel {
   position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column;
   background: var(--bg-primary); max-width: 1152px; margin: 0 auto;
@@ -673,6 +682,7 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const qrProductId = urlParams.get("u");
   const qrStoreId = urlParams.get("s");
+  const isScanMode = urlParams.get("scan") === "1";
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -779,6 +789,16 @@ export default function App() {
       <div className="app-container">
         <CustomerQRView productId={qrProductId} storeId={qrStoreId} />
         <InstallBanner />
+      </div>
+    </>;
+  }
+
+  // QR Scanner page
+  if (isScanMode && qrStoreId) {
+    return <>
+      <style>{css}</style>
+      <div className="app-container">
+        <QRScannerPage storeId={qrStoreId} />
       </div>
     </>;
   }
@@ -2230,6 +2250,21 @@ function CustomerQRView({ productId, storeId }) {
             </button>
           )}
 
+          {/* SCAN ANOTHER QR */}
+          <button className="scan-qr-btn" onClick={() => {
+            // Try native camera/QR scanner if available
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              // Open the site root which will trigger a new QR scan via camera app
+              // Most practical: just open camera or redirect to a scanner-friendly page
+              const baseUrl = window.location.origin + window.location.pathname;
+              // Remove current product params, user scans new QR which has its own params
+              window.location.href = baseUrl + '?scan=1&s=' + storeId;
+            }
+          }}>
+            <Icon name="scan" size={20} />
+            Başka Ürün QR Kodu Okut
+          </button>
+
           {product.description && <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: "16px 0" }}>{product.description}</p>}
 
           <div className="customer-details">
@@ -2260,6 +2295,60 @@ function CustomerQRView({ productId, storeId }) {
       )}
 
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 16, marginBottom: cartCount > 0 ? 80 : 0 }}>Market Fiyat ile güçlendirilmiştir</p>
+    </div>
+  );
+}
+
+// ==================== QR SCANNER PAGE ====================
+function QRScannerPage({ storeId }) {
+  const [cartItems] = useState(() => getCart(storeId));
+  const cartTotal = cartItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
+  const cartCount = cartItems.length;
+
+  return (
+    <div className="customer-view" style={{ justifyContent: "center", paddingTop: 60 }}>
+      <div style={{ textAlign: "center", maxWidth: 400, width: "100%" }}>
+        <div style={{ fontSize: 64, marginBottom: 20 }}>📷</div>
+        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>QR Kod Okut</h1>
+        <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
+          Telefonunuzun kamera uygulamasını açın ve raftaki QR kodu okutun. Otomatik olarak ürün sayfasına yönlendirilirsiniz.
+        </p>
+
+        <div style={{
+          background: "var(--bg-card)", border: "2px dashed var(--border)", borderRadius: 16,
+          padding: 32, marginBottom: 24
+        }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
+              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>1</span>
+              Kamera uygulamanızı açın
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
+              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>2</span>
+              Raftaki QR koda tutun
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
+              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--success-soft)", color: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>✓</span>
+              Ürün bilgisi ve fiyatı görün
+            </div>
+          </div>
+        </div>
+
+        {cartCount > 0 && (
+          <div style={{
+            background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12,
+            padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Icon name="cart" size={20} />
+              <span style={{ fontWeight: 600 }}>Sepetim ({cartCount} ürün)</span>
+            </div>
+            <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: "var(--accent)" }}>{formatPrice(cartTotal)}</span>
+          </div>
+        )}
+
+        <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 32 }}>Market Fiyat ile güçlendirilmiştir</p>
+      </div>
     </div>
   );
 }
