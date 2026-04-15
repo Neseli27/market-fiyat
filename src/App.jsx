@@ -2095,6 +2095,38 @@ function CustomerQRView({ productId, storeId }) {
 
   const clearCart = () => { setCartItems([]); setShowCart(false); };
 
+  const [showHistory, setShowHistory] = useState(false);
+
+  const HISTORY_KEY = `mf_history_${storeId}`;
+  const getHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
+
+  const completeOrder = () => {
+    if (cartItems.length === 0) return;
+    const history = getHistory();
+    const order = {
+      id: Date.now(),
+      date: new Date().toISOString(),
+      items: cartItems.map(i => ({ name: i.name, price: i.price, qty: i.qty, unit: i.unit, isWeighed: i.isWeighed || false })),
+      total: cartTotal,
+      itemCount: cartItems.length
+    };
+    history.unshift(order);
+    // Son 20 alışverişi tut
+    if (history.length > 20) history.length = 20;
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    setCartItems([]);
+    setShowCart(false);
+    setJustAdded(false);
+    alert("Alışveriş kaydedildi! Geçmiş alışverişlerinizden görebilirsiniz.");
+  };
+
+  const clearHistory = () => {
+    if (confirm("Tüm alışveriş geçmişi silinecek. Emin misiniz?")) {
+      localStorage.removeItem(HISTORY_KEY);
+      setShowHistory(false);
+    }
+  };
+
   const cartTotal = cartItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
   const cartCount = cartItems.length;
 
@@ -2169,8 +2201,101 @@ function CustomerQRView({ productId, storeId }) {
               <span>Toplam</span>
               <span className="total-price">{formatPrice(cartTotal)}</span>
             </div>
-            <button className="cart-clear-btn" onClick={clearCart}>
-              <Icon name="trash" size={16} /> Sepeti Temizle
+            <button style={{
+              width: "100%", padding: 16, border: "none", borderRadius: 12,
+              background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+              fontSize: 16, fontWeight: 700, fontFamily: "inherit", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+              marginBottom: 10, transition: "all 0.2s"
+            }} onClick={completeOrder}>
+              <Icon name="check" size={20} /> Alışverişi Tamamla
+            </button>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="cart-clear-btn" style={{ flex: 1 }} onClick={clearCart}>
+                <Icon name="trash" size={14} /> Temizle
+              </button>
+              <button style={{
+                flex: 1, padding: 14, border: "1px solid var(--border)", borderRadius: 12,
+                background: "var(--bg-hover)", color: "var(--text-secondary)", fontSize: 14,
+                fontWeight: 600, fontFamily: "inherit", cursor: "pointer", transition: "all 0.2s"
+              }} onClick={() => { setShowCart(false); setShowHistory(true); }}>
+                📋 Geçmiş
+              </button>
+            </div>
+          </div>
+        )}
+        {cartItems.length === 0 && (
+          <div className="cart-footer">
+            <button style={{
+              width: "100%", padding: 14, border: "1px solid var(--border)", borderRadius: 12,
+              background: "var(--bg-hover)", color: "var(--text-secondary)", fontSize: 14,
+              fontWeight: 600, fontFamily: "inherit", cursor: "pointer", display: "flex",
+              alignItems: "center", justifyContent: "center", gap: 8
+            }} onClick={() => { setShowCart(false); setShowHistory(true); }}>
+              📋 Geçmiş Alışverişlerim
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // History Panel
+  if (showHistory) {
+    const history = getHistory();
+    return (
+      <div className="cart-panel">
+        <div className="cart-header">
+          <button className="btn btn-icon btn-secondary" onClick={() => setShowHistory(false)}><Icon name="back" size={20} /></button>
+          <h2>📋 Geçmiş Alışverişler</h2>
+          <span className="cart-item-count">{history.length} kayıt</span>
+        </div>
+        <div className="cart-items">
+          {history.length === 0 ? (
+            <div className="cart-empty">
+              <span style={{ fontSize: 48 }}>📋</span>
+              <p>Henüz kayıtlı alışveriş yok</p>
+              <p style={{ fontSize: 13 }}>Alışverişinizi tamamladığınızda burada görünür</p>
+            </div>
+          ) : (
+            history.map((order, idx) => {
+              const date = new Date(order.date);
+              const dateStr = date.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+              const timeStr = date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+              return (
+                <details key={order.id} className="cart-item" style={{ display: "block", cursor: "pointer", padding: 0 }}>
+                  <summary style={{ padding: 14, display: "flex", alignItems: "center", justifyContent: "space-between", listStyle: "none" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{dateStr}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                        {timeStr} · {order.itemCount} ürün
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: "var(--accent)", fontSize: 16, flexShrink: 0, marginLeft: 12 }}>
+                      {formatPrice(order.total)}
+                    </div>
+                  </summary>
+                  <div style={{ padding: "0 14px 14px", borderTop: "1px solid var(--border)", marginTop: 8, paddingTop: 12 }}>
+                    {order.items.map((item, i) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", fontSize: 13 }}>
+                        <span style={{ color: "var(--text-secondary)" }}>
+                          {item.name} {item.isWeighed ? `(${item.qty} ${item.unit})` : `×${item.qty}`}
+                        </span>
+                        <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 500 }}>
+                          {formatPrice(item.price * item.qty)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })
+          )}
+        </div>
+        {history.length > 0 && (
+          <div className="cart-footer">
+            <button className="cart-clear-btn" onClick={clearHistory}>
+              <Icon name="trash" size={14} /> Geçmişi Temizle
             </button>
           </div>
         )}
@@ -2286,13 +2411,18 @@ function CustomerQRView({ productId, storeId }) {
       </div>
 
       {/* Floating Cart Button */}
-      {cartCount > 0 && (
+      {cartCount > 0 ? (
         <button className="cart-fab" onClick={() => setShowCart(true)}>
           <Icon name="cart" size={20} />
           Sepetim ({formatPrice(cartTotal)})
           <span className="cart-count">{cartCount}</span>
         </button>
-      )}
+      ) : getHistory().length > 0 ? (
+        <button className="cart-fab" onClick={() => setShowHistory(true)} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
+          <span style={{ fontSize: 16 }}>📋</span>
+          <span style={{ color: "var(--text-secondary)" }}>Geçmiş Alışverişler</span>
+        </button>
+      ) : null}
 
       <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 16, marginBottom: cartCount > 0 ? 80 : 0 }}>Market Fiyat ile güçlendirilmiştir</p>
     </div>
