@@ -340,6 +340,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg-primary); color:
 
 @keyframes slideIn { from { transform: translateX(100%); opacity:0; } to { transform: translateX(0); opacity:1; } }
 @keyframes fadeOut { from { opacity:1; } to { opacity:0; } }
+@keyframes fadeIn { from { opacity:0; transform: scale(0.8); } to { opacity:1; transform: scale(1); } }
 
 /* Auth Page */
 .auth-page {
@@ -2083,7 +2084,6 @@ function CustomerQRView({ productId, storeId }) {
       }];
     });
     setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 1500);
   };
 
   const updateQty = (id, delta) => {
@@ -2096,6 +2096,9 @@ function CustomerQRView({ productId, storeId }) {
   const clearCart = () => { setCartItems([]); setShowCart(false); };
 
   const [showHistory, setShowHistory] = useState(false);
+  const [customerToast, setCustomerToast] = useState(null);
+
+  const showCToast = (msg) => { setCustomerToast(msg); setTimeout(() => setCustomerToast(null), 3000); };
 
   const HISTORY_KEY = `mf_history_${storeId}`;
   const getHistory = () => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
@@ -2117,7 +2120,7 @@ function CustomerQRView({ productId, storeId }) {
     setCartItems([]);
     setShowCart(false);
     setJustAdded(false);
-    alert("Alışveriş kaydedildi! Geçmiş alışverişlerinizden görebilirsiniz.");
+    showCToast("✓ Alışveriş kaydedildi!");
   };
 
   const clearHistory = () => {
@@ -2305,119 +2308,156 @@ function CustomerQRView({ productId, storeId }) {
 
   return (
     <div className="customer-view">
-      <div className="customer-card">
-        <div className="customer-card-image">
-          {product.imageUrl ? (
-            <img src={product.imageUrl} alt={product.name} />
-          ) : (
-            <div className="no-image"><Icon name="box" size={48} /></div>
-          )}
-        </div>
-        <div className="customer-card-body">
-          <h1>{product.name}</h1>
-          {product.categoryName && <span className="badge badge-blue cat-badge">{product.categoryName}</span>}
+      {customerToast && <div className="toast success">{customerToast}</div>}
 
-          {hasCampaign && (
-            <div className="customer-campaign-box">
-              <Icon name="campaign" size={18} />
-              <span style={{ fontSize: 14, fontWeight: 600, color: "var(--success)" }}>
-                Kampanya! {product.campaignDiscount} İndirim
-              </span>
-            </div>
-          )}
+      {/* AFTER ADD — product card disappears, action screen shows */}
+      {justAdded ? (
+        <div style={{ width: "100%", maxWidth: 480, textAlign: "center", paddingTop: 40 }}>
+          <div style={{ fontSize: 64, marginBottom: 16, animation: "fadeIn 0.3s ease" }}>✅</div>
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>{product.name}</h2>
+          <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 24 }}>
+            {isWeighed ? `${weightValue} ${product.unit} — ` : ""}{formatPrice(displayPrice)} sepete eklendi
+          </p>
 
-          <div className="customer-price-box">
-            <div>
-              <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Fiyat</div>
-              <div className="current-price">{formatPrice(displayPrice)}</div>
+          {/* Cart summary mini */}
+          <div style={{
+            background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12,
+            padding: 16, marginBottom: 24, display: "flex", alignItems: "center", justifyContent: "space-between"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Icon name="cart" size={20} />
+              <span style={{ fontWeight: 600 }}>{cartCount} ürün</span>
             </div>
-            {hasCampaign && <div className="old-price">{formatPrice(product.price)}</div>}
+            <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: "var(--accent)", fontSize: 18 }}>{formatPrice(cartTotal)}</span>
           </div>
 
-          {/* ADD TO CART */}
-          {showWeightInput ? (
-            <div style={{ marginTop: 20, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 20 }}>⚖️</span> Tartı Miktarını Girin
-              </div>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>
-                Tartı etiketindeki {product.unit === "kg" ? "kilogram" : "litre"} miktarını yazın
-              </p>
-              <div style={{ display: "flex", gap: 10 }}>
-                <input
-                  className="form-input"
-                  type="number" step="0.001" min="0.001"
-                  placeholder={product.unit === "kg" ? "Örn: 0.750" : "Örn: 1.5"}
-                  value={weightValue}
-                  onChange={e => setWeightValue(e.target.value)}
-                  autoFocus
-                  style={{ flex: 1, fontSize: 18, fontFamily: "'JetBrains Mono'", textAlign: "center", fontWeight: 700 }}
-                />
-                <span style={{ display: "flex", alignItems: "center", fontWeight: 700, fontSize: 16, color: "var(--text-secondary)" }}>{product.unit}</span>
-              </div>
-              {weightValue && parseFloat(weightValue) > 0 && (
-                <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--accent-soft)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{weightValue} {product.unit} × {formatPrice(displayPrice)}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: "var(--accent)", fontSize: 16 }}>{formatPrice(parseFloat(weightValue) * displayPrice)}</span>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button className="btn btn-secondary" onClick={() => setShowWeightInput(false)} style={{ flex: 1 }}>İptal</button>
-                <button className="add-to-cart-btn" onClick={addWeighed} style={{ flex: 2, margin: 0 }} disabled={!weightValue || parseFloat(weightValue) <= 0}>
-                  <Icon name="cart" size={18} /> Sepete Ekle
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button className={`add-to-cart-btn ${justAdded ? "added" : ""}`} onClick={handleAddClick}>
-              <Icon name="cart" size={20} />
-              {justAdded ? "✓ Sepete Eklendi!" : isWeighed ? `⚖️ Tartı ile Sepete Ekle (${product.unit}/fiyat)` : inCart ? `Sepete Ekle (${inCart.qty} adet sepette)` : "Sepete Ekle"}
-            </button>
-          )}
-
-          {/* SCAN ANOTHER QR */}
-          <button className="scan-qr-btn" onClick={() => {
-            // Try native camera/QR scanner if available
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              // Open the site root which will trigger a new QR scan via camera app
-              // Most practical: just open camera or redirect to a scanner-friendly page
-              const baseUrl = window.location.origin + window.location.pathname;
-              // Remove current product params, user scans new QR which has its own params
-              window.location.href = baseUrl + '?scan=1&s=' + storeId;
-            }
-          }}>
+          {/* Primary: Scan another */}
+          <button className="add-to-cart-btn" onClick={() => {
+            const baseUrl = window.location.origin + window.location.pathname;
+            window.location.href = baseUrl + '?scan=1&s=' + storeId;
+          }} style={{ background: "linear-gradient(135deg, #3b82f6, #2563eb)", marginTop: 0 }}>
             <Icon name="scan" size={20} />
             Başka Ürün QR Kodu Okut
           </button>
 
-          {product.description && <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: "16px 0" }}>{product.description}</p>}
-
-          <div className="customer-details">
-            {product.brand && <div className="customer-detail-row"><span className="label">Marka</span><span>{product.brand}</span></div>}
-            {product.weight && <div className="customer-detail-row"><span className="label">Ağırlık/Hacim</span><span>{product.weight}</span></div>}
-            {product.unit && <div className="customer-detail-row"><span className="label">Birim</span><span>{product.unit}</span></div>}
-            {product.origin && <div className="customer-detail-row"><span className="label">Menşei</span><span>{product.origin}</span></div>}
-            {product.barcode && <div className="customer-detail-row"><span className="label">Barkod</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13 }}>{product.barcode}</span></div>}
+          {/* Secondary actions */}
+          <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
+            <button className="scan-qr-btn" style={{ flex: 1, margin: 0 }} onClick={() => setShowCart(true)}>
+              <Icon name="cart" size={18} />
+              Sepetim
+            </button>
+            <button style={{
+              flex: 1, padding: 14, border: "none", borderRadius: 12,
+              background: "linear-gradient(135deg, #10b981, #059669)", color: "white",
+              fontSize: 14, fontWeight: 600, fontFamily: "inherit", cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8
+            }} onClick={completeOrder}>
+              <Icon name="check" size={18} />
+              Alışverişi Bitir
+            </button>
           </div>
-
-          {store && (
-            <div className="customer-store-info">
-              <h3>{store.name}</h3>
-              {store.city && <p>{store.city}</p>}
-              {store.phone && <p>{store.phone}</p>}
-            </div>
-          )}
         </div>
-      </div>
+      ) : (
+        /* PRODUCT CARD — normal view */
+        <div className="customer-card">
+          <div className="customer-card-image">
+            {product.imageUrl ? (
+              <img src={product.imageUrl} alt={product.name} />
+            ) : (
+              <div className="no-image"><Icon name="box" size={48} /></div>
+            )}
+          </div>
+          <div className="customer-card-body">
+            <h1>{product.name}</h1>
+            {product.categoryName && <span className="badge badge-blue cat-badge">{product.categoryName}</span>}
 
-      {/* Floating Cart Button */}
-      {cartCount > 0 ? (
+            {hasCampaign && (
+              <div className="customer-campaign-box">
+                <Icon name="campaign" size={18} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: "var(--success)" }}>
+                  Kampanya! {product.campaignDiscount} İndirim
+                </span>
+              </div>
+            )}
+
+            <div className="customer-price-box">
+              <div>
+                <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 4 }}>Fiyat</div>
+                <div className="current-price">{formatPrice(displayPrice)}</div>
+              </div>
+              {hasCampaign && <div className="old-price">{formatPrice(product.price)}</div>}
+            </div>
+
+            {/* ADD TO CART */}
+            {showWeightInput ? (
+              <div style={{ marginTop: 20, background: "var(--bg-secondary)", border: "1px solid var(--border)", borderRadius: 12, padding: 20 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 20 }}>⚖️</span> Tartı Miktarını Girin
+                </div>
+                <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 14 }}>
+                  Tartı etiketindeki {product.unit === "kg" ? "kilogram" : "litre"} miktarını yazın
+                </p>
+                <div style={{ display: "flex", gap: 10 }}>
+                  <input
+                    className="form-input"
+                    type="number" step="0.001" min="0.001"
+                    placeholder={product.unit === "kg" ? "Örn: 0.750" : "Örn: 1.5"}
+                    value={weightValue}
+                    onChange={e => setWeightValue(e.target.value)}
+                    autoFocus
+                    style={{ flex: 1, fontSize: 18, fontFamily: "'JetBrains Mono'", textAlign: "center", fontWeight: 700 }}
+                  />
+                  <span style={{ display: "flex", alignItems: "center", fontWeight: 700, fontSize: 16, color: "var(--text-secondary)" }}>{product.unit}</span>
+                </div>
+                {weightValue && parseFloat(weightValue) > 0 && (
+                  <div style={{ marginTop: 12, padding: "10px 14px", background: "var(--accent-soft)", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>{weightValue} {product.unit} × {formatPrice(displayPrice)}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono'", fontWeight: 700, color: "var(--accent)", fontSize: 16 }}>{formatPrice(parseFloat(weightValue) * displayPrice)}</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+                  <button className="btn btn-secondary" onClick={() => setShowWeightInput(false)} style={{ flex: 1 }}>İptal</button>
+                  <button className="add-to-cart-btn" onClick={addWeighed} style={{ flex: 2, margin: 0 }} disabled={!weightValue || parseFloat(weightValue) <= 0}>
+                    <Icon name="cart" size={18} /> Sepete Ekle
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="add-to-cart-btn" onClick={handleAddClick}>
+                <Icon name="cart" size={20} />
+                {isWeighed ? `⚖️ Tartı ile Sepete Ekle (${product.unit}/fiyat)` : inCart ? `Sepete Ekle (${inCart.qty} adet sepette)` : "Sepete Ekle"}
+              </button>
+            )}
+
+            {product.description && <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, margin: "16px 0" }}>{product.description}</p>}
+
+            <div className="customer-details">
+              {product.brand && <div className="customer-detail-row"><span className="label">Marka</span><span>{product.brand}</span></div>}
+              {product.weight && <div className="customer-detail-row"><span className="label">Ağırlık/Hacim</span><span>{product.weight}</span></div>}
+              {product.unit && <div className="customer-detail-row"><span className="label">Birim</span><span>{product.unit}</span></div>}
+              {product.origin && <div className="customer-detail-row"><span className="label">Menşei</span><span>{product.origin}</span></div>}
+              {product.barcode && <div className="customer-detail-row"><span className="label">Barkod</span><span style={{ fontFamily: "'JetBrains Mono'", fontSize: 13 }}>{product.barcode}</span></div>}
+            </div>
+
+            {store && (
+              <div className="customer-store-info">
+                <h3>{store.name}</h3>
+                {store.city && <p>{store.city}</p>}
+                {store.phone && <p>{store.phone}</p>}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Floating Cart Button — only when viewing product (not after add) */}
+      {!justAdded && cartCount > 0 ? (
         <button className="cart-fab" onClick={() => setShowCart(true)}>
           <Icon name="cart" size={20} />
           Sepetim ({formatPrice(cartTotal)})
           <span className="cart-count">{cartCount}</span>
         </button>
-      ) : getHistory().length > 0 ? (
+      ) : !justAdded && getHistory().length > 0 ? (
         <button className="cart-fab" onClick={() => setShowHistory(true)} style={{ background: "var(--bg-card)", border: "1px solid var(--border)", boxShadow: "0 8px 32px rgba(0,0,0,0.3)" }}>
           <span style={{ fontSize: 16 }}>📋</span>
           <span style={{ color: "var(--text-secondary)" }}>Geçmiş Alışverişler</span>
