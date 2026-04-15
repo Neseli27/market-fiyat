@@ -280,6 +280,47 @@ const css = `
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
 
+/* App Container — max 12 inch (1152px) centered */
+.app-container {
+  max-width: 1152px; margin: 0 auto; min-height: 100vh;
+  position: relative;
+}
+@media (min-width: 1153px) {
+  body { background: #050810; }
+  .app-container { border-left: 1px solid var(--border); border-right: 1px solid var(--border); background: var(--bg-primary); }
+}
+
+/* PWA Install Banner */
+.install-banner {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 1152px;
+  background: linear-gradient(135deg, #1a2035, #232b42);
+  border-top: 1px solid var(--border);
+  padding: 14px 20px; display: flex; align-items: center; gap: 14px;
+  z-index: 95; box-shadow: 0 -4px 24px rgba(0,0,0,0.4);
+  animation: slideUp 0.4s ease;
+}
+@keyframes slideUp { from { transform: translateX(-50%) translateY(100%); } to { transform: translateX(-50%) translateY(0); } }
+.install-banner-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  font-size: 22px;
+}
+.install-banner-text { flex: 1; min-width: 0; }
+.install-banner-text h4 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.install-banner-text p { font-size: 12px; color: var(--text-muted); }
+.install-banner-btn {
+  padding: 10px 20px; border: none; border-radius: 8px;
+  background: var(--accent); color: white; font-size: 13px; font-weight: 600;
+  font-family: inherit; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+}
+.install-banner-btn:hover { background: var(--accent-hover); }
+.install-banner-close {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  padding: 4px; flex-shrink: 0;
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -348,10 +389,11 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 .btn-sm { padding: 7px 14px; font-size: 13px; }
 
 /* Layout */
-.app-layout { display: flex; min-height: 100vh; }
+.app-layout { display: flex; min-height: 100vh; max-width: 1152px; margin: 0 auto; position: relative; }
 .sidebar {
   width: 260px; background: var(--bg-secondary); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+  display: flex; flex-direction: column; position: fixed; top: 0; bottom: 0; z-index: 50;
+  max-width: 260px;
 }
 .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border); }
 .sidebar-header h2 { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -366,7 +408,7 @@ textarea.form-input { resize: vertical; min-height: 80px; }
 .sidebar-item.active { background: var(--accent-soft); color: var(--accent); }
 .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
 
-.main-content { flex: 1; margin-left: 260px; padding: 32px; min-height: 100vh; }
+.main-content { flex: 1; margin-left: 260px; padding: 32px; min-height: 100vh; max-width: calc(1152px - 260px); }
 .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
 .page-header h1 { font-size: 24px; font-weight: 700; }
 .page-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -465,6 +507,7 @@ tr:hover td { background: var(--bg-hover); }
 .customer-view {
   min-height: 100vh; background: linear-gradient(180deg, #0a0e1a 0%, #1a2035 100%);
   padding: 20px; display: flex; flex-direction: column; align-items: center;
+  max-width: 1152px; margin: 0 auto;
 }
 .customer-card {
   background: var(--bg-card); border: 1px solid var(--border); border-radius: 20px;
@@ -518,7 +561,7 @@ tr:hover td { background: var(--bg-hover); }
 .add-to-cart-btn.added { background: linear-gradient(135deg, #6366f1, #8b5cf6); }
 .cart-panel {
   position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--bg-primary); max-width: 1152px; margin: 0 auto;
 }
 .cart-header {
   display: flex; align-items: center; justify-content: space-between;
@@ -618,11 +661,13 @@ tr:hover td { background: var(--bg-hover); }
 
 // ==================== MAIN APP ====================
 export default function App() {
-  const [auth, setAuth] = useState(null); // { idToken, refreshToken, uid, email }
-  const [userRole, setUserRole] = useState(null); // { role, storeId, storeName }
+  const [auth, setAuth] = useState(null);
+  const [userRole, setUserRole] = useState(null);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(false);
 
   // Check if this is a customer QR view
   const urlParams = new URLSearchParams(window.location.search);
@@ -632,6 +677,49 @@ export default function App() {
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  // PWA Install Prompt
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem("mf_install_dismissed");
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      if (!dismissed && !isStandalone) {
+        setShowInstallBanner(true);
+      }
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    // iOS detection — show banner for Safari
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    if (isIOS && isSafari && !isStandalone && !dismissed) {
+      setShowInstallBanner(true);
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const result = await installPrompt.userChoice;
+      if (result.outcome === 'accepted') {
+        setShowInstallBanner(false);
+      }
+      setInstallPrompt(null);
+    } else {
+      // iOS — show instructions
+      showToast("Safari'de Paylaş → Ana Ekrana Ekle seçin", "info");
+    }
+  };
+
+  const dismissInstall = () => {
+    setShowInstallBanner(false);
+    sessionStorage.setItem("mf_install_dismissed", "1");
   };
 
   // Auto refresh token
@@ -672,45 +760,68 @@ export default function App() {
     setUserRole(null);
   };
 
+  const InstallBanner = () => showInstallBanner ? (
+    <div className="install-banner">
+      <div className="install-banner-icon">📦</div>
+      <div className="install-banner-text">
+        <h4>Market Fiyat'ı Yükle</h4>
+        <p>Ana ekrana ekle, uygulama gibi kullan</p>
+      </div>
+      <button className="install-banner-btn" onClick={handleInstall}>Yükle</button>
+      <button className="install-banner-close" onClick={dismissInstall}><Icon name="x" size={18} /></button>
+    </div>
+  ) : null;
+
   // Customer QR View (no auth needed)
   if (qrProductId && qrStoreId) {
     return <>
       <style>{css}</style>
-      <CustomerQRView productId={qrProductId} storeId={qrStoreId} />
+      <div className="app-container">
+        <CustomerQRView productId={qrProductId} storeId={qrStoreId} />
+        <InstallBanner />
+      </div>
     </>;
   }
 
   if (loading) {
     return <>
       <style>{css}</style>
-      <div className="auth-page"><div className="spinner" /></div>
+      <div className="app-container"><div className="auth-page"><div className="spinner" /></div></div>
     </>;
   }
 
   if (!auth) {
     return <>
       <style>{css}</style>
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
-      <LoginPage onLogin={(a) => { setAuth(a); localStorage.setItem("qrmarket_auth", JSON.stringify(a)); }} showToast={showToast} />
+      <div className="app-container">
+        {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+        <LoginPage onLogin={(a) => { setAuth(a); localStorage.setItem("qrmarket_auth", JSON.stringify(a)); }} showToast={showToast} />
+        <InstallBanner />
+      </div>
     </>;
   }
 
   if (!userRole) {
     return <>
       <style>{css}</style>
-      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
-      <SetupPage auth={auth} onComplete={(r) => setUserRole(r)} showToast={showToast} />
+      <div className="app-container">
+        {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+        <SetupPage auth={auth} onComplete={(r) => setUserRole(r)} showToast={showToast} />
+      </div>
     </>;
   }
 
   return <>
     <style>{css}</style>
-    {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
-    {userRole.role === "superadmin" ? (
-      <SuperAdminPanel auth={auth} userRole={userRole} onLogout={handleLogout} showToast={showToast} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-    ) : (
-      <StorePanel auth={auth} userRole={userRole} onLogout={handleLogout} showToast={showToast} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-    )}
+    <div className="app-container">
+      {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}
+      {userRole.role === "superadmin" ? (
+        <SuperAdminPanel auth={auth} userRole={userRole} onLogout={handleLogout} showToast={showToast} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      ) : (
+        <StorePanel auth={auth} userRole={userRole} onLogout={handleLogout} showToast={showToast} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      )}
+      <InstallBanner />
+    </div>
   </>;
 }
 
