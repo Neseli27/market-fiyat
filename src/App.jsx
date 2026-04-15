@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 // ==================== FIREBASE CONFIG ====================
 const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyB1lmbOyvOCGftGPVmBMPwMfmeEqnbcAaw",
+  apiKey: "AIzaSyCqUSoowo2EbKKhG0SBcIzBYddwYOzHKRo",
   authDomain: "egitim-yonetim-platformu.firebaseapp.com",
   projectId: "egitim-yonetim-platformu",
-  storageBucket: "egitim-yonetim-platformu.appspot.com",
-  messagingSenderId: "386aborting",
-  appId: "1:386:web:placeholder"
+  storageBucket: "egitim-yonetim-platformu.firebasestorage.app",
+  messagingSenderId: "548967060709",
+  appId: "1:548967060709:web:97efdb0aac5b92d334700c"
 };
 
 // ==================== FIRESTORE HELPERS ====================
@@ -63,7 +63,7 @@ const fsFields = (obj) => {
 
 // Auth helper
 const AUTH_BASE = "https://identitytoolkit.googleapis.com/v1";
-const API_KEY = "AIzaSyB1lmbOyvOCGftGPVmBMPwMfmeEqnbcAaw";
+const API_KEY = "AIzaSyCqUSoowo2EbKKhG0SBcIzBYddwYOzHKRo";
 
 const signIn = async (email, password) => {
   const res = await fetch(`${AUTH_BASE}/accounts:signInWithPassword?key=${API_KEY}`, {
@@ -180,7 +180,7 @@ const fsDelete = async (path, token) => {
 
 // Storage upload
 const uploadImage = async (file, path, token) => {
-  const bucket = "egitim-yonetim-platformu.appspot.com";
+  const bucket = "egitim-yonetim-platformu.firebasestorage.app";
   const encodedPath = encodeURIComponent(path);
   const res = await fetch(
     `https://firebasestorage.googleapis.com/v0/b/${bucket}/o/${encodedPath}?uploadType=media`,
