@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Html5Qrcode } from "html5-qrcode";
 
 // ==================== FIREBASE CONFIG ====================
 const FIREBASE_CONFIG = {
@@ -2472,42 +2473,126 @@ function CustomerQRView({ productId, storeId }) {
 // ==================== QR SCANNER PAGE ====================
 function QRScannerPage({ storeId }) {
   const [cartItems] = useState(() => getCart(storeId));
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState(null);
+  const scannerRef = useRef(null);
+  const containerRef = useRef(null);
+
   const cartTotal = cartItems.reduce((sum, i) => sum + (i.price * i.qty), 0);
   const cartCount = cartItems.length;
 
-  return (
-    <div className="customer-view" style={{ justifyContent: "center", paddingTop: 60 }}>
-      <div style={{ textAlign: "center", maxWidth: 400, width: "100%" }}>
-        <div style={{ fontSize: 64, marginBottom: 20 }}>📷</div>
-        <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>QR Kod Okut</h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 32, lineHeight: 1.6 }}>
-          Telefonunuzun kamera uygulamasını açın ve raftaki QR kodu okutun. Otomatik olarak ürün sayfasına yönlendirilirsiniz.
-        </p>
+  const startScanner = async () => {
+    setError(null);
+    setScanning(true);
+    try {
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      scannerRef.current = html5QrCode;
+      
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          // QR okundu — URL'i parse et
+          html5QrCode.stop().catch(() => {});
+          scannerRef.current = null;
+          
+          // URL'den ürün ID ve store ID çıkar
+          try {
+            const url = new URL(decodedText);
+            const productId = url.searchParams.get("u");
+            const sid = url.searchParams.get("s");
+            if (productId && sid) {
+              window.location.href = decodedText;
+            } else {
+              setError("Bu QR kod Market Fiyat ürünü değil.");
+              setScanning(false);
+            }
+          } catch {
+            // URL değilse direkt yönlendir dene
+            if (decodedText.includes("?u=") && decodedText.includes("&s=")) {
+              window.location.href = decodedText;
+            } else {
+              setError("Bu QR kod Market Fiyat ürünü değil.");
+              setScanning(false);
+            }
+          }
+        },
+        () => {} // ignore scan failures
+      );
+    } catch (err) {
+      console.error("Camera error:", err);
+      setError("Kamera açılamadı. Lütfen kamera izni verin ve tekrar deneyin.");
+      setScanning(false);
+    }
+  };
 
-        <div style={{
-          background: "var(--bg-card)", border: "2px dashed var(--border)", borderRadius: 16,
-          padding: 32, marginBottom: 24
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16, alignItems: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
-              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>1</span>
-              Kamera uygulamanızı açın
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
-              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent-soft)", color: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>2</span>
-              Raftaki QR koda tutun
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, color: "var(--text-secondary)", fontSize: 14 }}>
-              <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--success-soft)", color: "var(--success)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13, flexShrink: 0 }}>✓</span>
-              Ürün bilgisi ve fiyatı görün
-            </div>
-          </div>
+  useEffect(() => {
+    // Sayfa açılınca otomatik başlat
+    const timer = setTimeout(() => startScanner(), 500);
+    return () => {
+      clearTimeout(timer);
+      if (scannerRef.current) {
+        scannerRef.current.stop().catch(() => {});
+        scannerRef.current = null;
+      }
+    };
+  }, []);
+
+  return (
+    <div className="customer-view" style={{ paddingTop: 20 }}>
+      <div style={{ width: "100%", maxWidth: 480 }}>
+        
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 20 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>
+            <Icon name="scan" size={22} /> QR Kod Okut
+          </h1>
+          <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+            Kamerayı ürünün QR koduna tutun
+          </p>
         </div>
 
+        {/* Camera View */}
+        <div style={{
+          background: "#000", borderRadius: 16, overflow: "hidden",
+          position: "relative", marginBottom: 20, minHeight: 300
+        }}>
+          <div id="qr-reader" ref={containerRef} style={{ width: "100%" }} />
+          
+          {!scanning && !error && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.8)"
+            }}>
+              <div className="spinner" style={{ marginBottom: 16 }} />
+              <p style={{ color: "white", fontSize: 14 }}>Kamera başlatılıyor...</p>
+            </div>
+          )}
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div style={{
+            background: "var(--danger-soft)", border: "1px solid rgba(239,68,68,0.2)",
+            borderRadius: 12, padding: 16, marginBottom: 16, textAlign: "center"
+          }}>
+            <p style={{ color: "var(--danger)", fontSize: 14, marginBottom: 12 }}>{error}</p>
+            <button className="btn btn-primary btn-sm" onClick={startScanner}>
+              Tekrar Dene
+            </button>
+          </div>
+        )}
+
+        {/* Cart Summary */}
         {cartCount > 0 && (
           <div style={{
             background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12,
-            padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between"
+            padding: 16, display: "flex", alignItems: "center", justifyContent: "space-between",
+            marginBottom: 16
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Icon name="cart" size={20} />
@@ -2517,7 +2602,15 @@ function QRScannerPage({ storeId }) {
           </div>
         )}
 
-        <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 32 }}>Market Fiyat ile güçlendirilmiştir</p>
+        {/* Tip */}
+        <div style={{
+          background: "var(--bg-card)", border: "1px solid var(--border)", borderRadius: 12,
+          padding: 14, fontSize: 13, color: "var(--text-muted)", textAlign: "center", lineHeight: 1.5
+        }}>
+          💡 QR kodu çerçevenin içine yerleştirin. Otomatik algılanacaktır.
+        </div>
+
+        <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 24, textAlign: "center" }}>Market Fiyat ile güçlendirilmiştir</p>
       </div>
     </div>
   );
